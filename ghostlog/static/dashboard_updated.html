@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GhostLog — Incident Response</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;background:#0F0C09;}
+:root{
+  --gold:#C8A44A;--gold-light:#E6CF8A;--gold-dim:rgba(200,164,74,.3);
+  --crimson:#8B1515;--amber:#B87820;
+  --ivory:#F0EAE0;--muted:#8A7A65;--dim:#3A3028;
+  --fd:'Cinzel',serif;--fm:'JetBrains Mono',monospace;
+}
+.ml{background-image:linear-gradient(109deg,transparent 33%,rgba(155,138,110,.22) 35%,rgba(155,138,110,.07) 37%,transparent 39%),linear-gradient(72deg,transparent 47%,rgba(135,118,90,.15) 49%,rgba(135,118,90,.05) 51%,transparent 53%),linear-gradient(134deg,transparent 21%,rgba(175,158,128,.10) 23%,transparent 25%),linear-gradient(to right,#F5F0E7,#EDE5D5,#F2EBE1);}
+.md{background-image:linear-gradient(109deg,transparent 33%,rgba(80,60,35,.20) 35%,rgba(80,60,35,.07) 37%,transparent 39%),linear-gradient(72deg,transparent 47%,rgba(60,45,22,.14) 49%,rgba(60,45,22,.05) 51%,transparent 53%),linear-gradient(to bottom,#16120E,#1C1710);}
+@keyframes pc{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes sh{0%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+.shell{font-family:system-ui,sans-serif;background:#0F0C09;height:100vh;display:flex;flex-direction:column;color:var(--ivory);overflow:hidden;}
+.topbar{flex-shrink:0;height:50px;border-bottom:1px solid var(--gold);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:relative;overflow:hidden;}
+.topbar::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent 35%,rgba(255,255,255,.08) 50%,transparent 65%);animation:sh 7s ease-in-out infinite;}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--fd);font-weight:700;font-size:15px;letter-spacing:.15em;color:#1A150E;z-index:1;}
+.blogo{width:27px;height:27px;border-radius:50%;background:radial-gradient(circle,#E6CF8A 0%,#C8A44A 60%,#8B6914 100%);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:11px;font-weight:700;color:#1A150E;}
+.bdiv{width:1px;height:13px;background:var(--gold);opacity:.35;}
+.bsub{font-size:8px;letter-spacing:.14em;color:var(--muted);}
+.tright{display:flex;align-items:center;gap:14px;z-index:1;}
+.si{display:flex;align-items:center;gap:5px;font-family:var(--fm);font-size:8px;letter-spacing:.07em;}
+.dot{width:5px;height:5px;border-radius:50%;}
+.body{display:flex;flex:1;overflow:hidden;}
+.sb{width:168px;flex-shrink:0;border-right:1px solid rgba(200,164,74,.2);display:flex;flex-direction:column;overflow:hidden;}
+.slbl{font-family:var(--fd);font-size:7.5px;letter-spacing:.18em;color:var(--gold);padding:11px 14px 8px;border-bottom:1px solid rgba(200,164,74,.1);}
+.fbtn{padding:7px 14px;font-family:var(--fd);font-size:9px;letter-spacing:.1em;color:var(--muted);cursor:pointer;border-left:2px solid transparent;transition:all .18s;background:none;border-top:none;border-right:none;border-bottom:none;text-align:left;width:100%;}
+.fbtn:hover{color:var(--ivory);background:rgba(200,164,74,.07);}
+.fbtn.on{color:var(--gold);border-left-color:var(--gold);background:rgba(200,164,74,.07);}
+.sts{border-top:1px solid rgba(200,164,74,.1);padding:12px 14px;margin-top:auto;}
+.st{margin-bottom:10px;}
+.stl{font-family:var(--fd);font-size:7px;letter-spacing:.14em;color:var(--dim);margin-bottom:2px;}
+.stv{font-family:var(--fm);font-size:16px;font-weight:500;}
+.feed{flex:0 0 280px;border-right:1px solid rgba(200,164,74,.14);display:flex;flex-direction:column;overflow:hidden;background:#130F0C;}
+.fl{flex:1;overflow-y:auto;padding:4px 0;}
+.ic{margin:5px 9px;padding:12px;border:1px solid rgba(200,164,74,.1);cursor:pointer;transition:all .2s;border-radius:2px;}
+.ic:hover{border-color:rgba(200,164,74,.28);}
+.ic.on{background-image:linear-gradient(109deg,transparent 33%,rgba(155,138,110,.18) 35%,rgba(155,138,110,.06) 37%,transparent 39%),linear-gradient(72deg,transparent 47%,rgba(135,118,90,.12) 49%,rgba(135,118,90,.04) 51%,transparent 53%),linear-gradient(to bottom right,#F5F0E7,#EDE5D5,#F2EBE1);border-color:var(--gold)!important;}
+.ict{font-family:var(--fd);font-size:11px;font-weight:600;line-height:1.4;letter-spacing:.02em;margin-bottom:5px;}
+.sbdg{font-family:var(--fm);font-size:7px;letter-spacing:.12em;padding:2px 5px;border-radius:1px;}
+.detail{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#0F0C09;min-width:0;}
+.dh{padding:14px 20px;border-bottom:1px solid rgba(200,164,74,.14);flex-shrink:0;}
+.dtitle{font-family:var(--fd);font-size:13px;font-weight:700;line-height:1.35;margin-bottom:7px;}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;}
+.chip{font-family:var(--fm);font-size:7.5px;letter-spacing:.06em;padding:2px 7px;border-radius:1px;background:rgba(200,164,74,.06);border:1px solid rgba(200,164,74,.14);color:var(--muted);}
+.chip-d{color:var(--crimson);background:rgba(139,21,21,.1);border-color:rgba(139,21,21,.28);}
+.chip-ok{color:#2A6B3A;background:rgba(42,107,58,.1);border-color:rgba(42,107,58,.28);}
+.dbody{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.replay{padding:14px 20px;}
+.clbl{font-family:var(--fd);font-size:7.5px;color:var(--gold);letter-spacing:.18em;margin-bottom:13px;}
+.cwrap{position:relative;}
+.cline{position:absolute;left:12px;top:13px;bottom:13px;width:1px;background:linear-gradient(to bottom,var(--gold),rgba(200,164,74,.2),var(--gold));}
+.step{display:flex;gap:13px;margin-bottom:14px;animation:fi .3s ease both;}
+.nd{flex-shrink:0;width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:8px;font-weight:500;position:relative;z-index:1;}
+.ndv{background:rgba(200,164,74,.12);border:1px solid var(--gold);color:var(--gold);}
+.ndi{background:rgba(139,21,21,.12);border:1px solid var(--crimson);color:var(--crimson);}
+.sc{flex:1;padding:11px;border-radius:2px;}
+.st2{font-family:var(--fd);font-size:11px;font-weight:600;letter-spacing:.02em;margin-bottom:3px;color:var(--ivory);}
+.sr{font-size:11px;color:var(--muted);line-height:1.5;}
+.sm{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+.tb{font-family:var(--fm);font-size:7px;letter-spacing:.12em;padding:1px 5px;border-radius:1px;}
+.apanel{border-top:1px solid rgba(200,164,74,.15);padding:14px 20px;animation:fi .4s ease;}
+.albl{font-family:var(--fd);font-size:7.5px;color:var(--gold);letter-spacing:.18em;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.asrc{font-family:var(--fm);font-size:7px;color:var(--dim);}
+.rc{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ivory);line-height:1.45;letter-spacing:.02em;margin-bottom:12px;padding:12px 14px;border-left:3px solid var(--gold);background:rgba(200,164,74,.05);}
+.asec{font-family:var(--fd);font-size:7.5px;color:var(--gold);letter-spacing:.15em;margin-bottom:6px;margin-top:12px;}
+.fac{font-size:11px;color:var(--muted);line-height:1.5;padding:4px 0 4px 14px;border-left:1px solid rgba(200,164,74,.2);margin-bottom:3px;position:relative;}
+.fac::before{content:'▸';position:absolute;left:3px;color:var(--gold);font-size:8px;top:5px;}
+.fx{font-size:11px;color:var(--muted);line-height:1.5;padding:4px 0 4px 20px;margin-bottom:3px;position:relative;}
+.fxn{position:absolute;left:0;font-family:var(--fm);font-size:8px;color:var(--gold);}
+.cb{height:2px;background:rgba(200,164,74,.14);border-radius:1px;margin-top:12px;overflow:hidden;}
+.cf{height:100%;background:linear-gradient(to right,var(--gold),#E6CF8A);border-radius:1px;}
+.cl2{font-family:var(--fm);font-size:8px;color:var(--dim);margin-top:4px;display:flex;justify-content:space-between;}
+.abar{padding:12px 20px;border-top:1px solid rgba(200,164,74,.12);display:flex;gap:8px;flex-shrink:0;}
+.btn{flex:1;padding:9px;background:transparent;font-family:var(--fd);font-size:9px;letter-spacing:.12em;cursor:pointer;border-radius:2px;transition:all .2s;}
+.btn-g{border:1px solid var(--gold);color:var(--gold);}
+.btn-g:hover{background:rgba(200,164,74,.1);box-shadow:0 0 14px var(--gold-dim);}
+.btn-c{border:1px solid var(--crimson);color:var(--crimson);}
+.btn-c:hover{background:rgba(139,21,21,.1);}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.spinner{width:13px;height:13px;border:1px solid rgba(200,164,74,.3);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px;}
+.rform{padding:14px 20px;border-top:1px solid rgba(200,164,74,.12);animation:fi .3s ease;}
+.rform-title{font-family:var(--fd);font-size:9px;letter-spacing:.14em;color:var(--gold);margin-bottom:12px;}
+.rform-label{font-family:var(--fd);font-size:7.5px;letter-spacing:.12em;color:var(--dim);margin-bottom:4px;margin-top:10px;}
+.rform textarea{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(200,164,74,.25);border-radius:2px;padding:8px 10px;font-family:system-ui;font-size:12px;color:var(--ivory);resize:vertical;min-height:60px;outline:none;}
+.rform-btns{display:flex;gap:8px;margin-top:12px;}
+.demo-badge{font-family:var(--fm);font-size:7px;letter-spacing:.1em;color:var(--amber);border:1px solid rgba(184,120,32,.3);padding:2px 8px;border-radius:1px;margin-left:8px;}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:rgba(200,164,74,.2);border-radius:2px;}
+.empty{padding:40px 20px;font-family:var(--fd);font-size:10px;color:var(--dim);letter-spacing:.12em;text-align:center;line-height:2;}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="topbar ml">
+  <div class="brand">
+    <div class="blogo">G</div>
+    GHOSTLOG
+    <div class="bdiv"></div>
+    <span class="bsub">INCIDENT RESPONSE</span>
+    <span class="demo-badge" id="demoBadge" style="display:none">DEMO MODE</span>
+  </div>
+  <div class="tright">
+    <div class="si"><div class="dot" id="wsDot" style="background:var(--dim)"></div><span id="wsTxt" style="color:var(--dim)">CONNECTING</span></div>
+    <div class="si" id="activeRow" style="display:none"><div class="dot" style="background:var(--crimson);animation:pc 2s infinite"></div><span id="activeTxt" style="color:var(--crimson)"></span></div>
+    <div class="si"><div class="dot" style="background:#2A6B3A"></div><span style="color:var(--dim)">CHAIN INTACT</span></div>
+  </div>
+</div>
+<div class="body">
+  <div class="sb md">
+    <div class="slbl">VIEW</div>
+    <button class="fbtn on" data-f="all" onclick="sf(this,'all')">ALL INCIDENTS</button>
+    <button class="fbtn" data-f="active" onclick="sf(this,'active')">ACTIVE</button>
+    <button class="fbtn" data-f="resolved" onclick="sf(this,'resolved')">RESOLVED</button>
+    <div class="slbl" style="margin-top:4px">SEVERITY</div>
+    <button class="fbtn" data-f="critical" onclick="sf(this,'critical')">CRITICAL</button>
+    <button class="fbtn" data-f="high" onclick="sf(this,'high')">HIGH</button>
+    <div class="sts">
+      <div class="st"><div class="stl">TOTAL</div><div class="stv" id="s1" style="color:var(--ivory)">—</div></div>
+      <div class="st"><div class="stl">UNRESOLVED</div><div class="stv" id="s2" style="color:var(--crimson)">—</div></div>
+      <div class="st"><div class="stl">CHAIN</div><div class="stv" style="color:var(--gold)">100%</div></div>
+    </div>
+  </div>
+  <div class="feed">
+    <div class="slbl">INCIDENT RECORD</div>
+    <div class="fl" id="feedList"></div>
+  </div>
+  <div class="detail">
+    <div class="dh md">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:var(--fd);font-size:7.5px;color:var(--gold);letter-spacing:.18em;margin-bottom:4px;" id="dId">SELECT AN INCIDENT</div>
+          <div class="dtitle" id="dTitle" style="color:var(--ivory)">—</div>
+        </div>
+        <div id="dBadge" style="flex-shrink:0;margin-left:12px;margin-top:2px;"></div>
+      </div>
+      <div class="chips" id="dChips"></div>
+    </div>
+    <div class="dbody">
+      <div class="replay" id="dReplay"><div class="empty">Select an incident<br>to begin replay</div></div>
+      <div id="aPanel"></div>
+      <div id="rForm"></div>
+    </div>
+    <div class="abar" id="aBar" style="display:none;">
+      <button class="btn btn-g" id="analyzeBtn" onclick="runAnalysis()">ANALYZE WITH CLAUDE</button>
+      <button class="btn btn-c" id="resolveBtn" onclick="showResolve()">DECLARE RESOLVED</button>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+const SEV={
+  critical:{c:'#8B1515',bg:'rgba(139,21,21,.12)',b:'rgba(139,21,21,.3)',l:'CRITICAL'},
+  high:{c:'#B87820',bg:'rgba(184,120,32,.12)',b:'rgba(184,120,32,.3)',l:'HIGH'},
+  medium:{c:'#7A7A20',bg:'rgba(122,122,32,.12)',b:'rgba(122,122,32,.3)',l:'MEDIUM'},
+};
+const RC={critical:'#8B1515',high:'#B87820',medium:'#7A7A20',low:'#2A6B3A'};
+
+const DEMO=[
+  {incident_id:'DEMO-001',title:'Agent deleted wrong user — GDPR workflow',severity:'critical',agent_id:'gdpr-agent',declared_at:new Date(Date.now()-3600000).toISOString(),resolved_at:null,
+   _sys:['postgres','s3','audit_logs'],_rb:false,
+   _steps:[
+    {step:1,action_type:'READ',description:'Fetch user record',reasoning:'Agent requires user context to validate GDPR request authenticity before proceeding.',risk_level:'low',chain_valid:true,reversible:true,duration_ms:12},
+    {step:2,action_type:'CALL',description:'Validate deletion request token',reasoning:'Cross-referenced request token against auth service to confirm intent.',risk_level:'low',chain_valid:true,reversible:true,duration_ms:34},
+    {step:3,action_type:'DECIDE',description:'Resolve target user_id from context',reasoning:'Agent extracted user_id from stale session context rather than active request payload. Root of error.',risk_level:'high',chain_valid:true,reversible:true,duration_ms:2},
+    {step:4,action_type:'DELETE',description:'Permanently delete user data',reasoning:'Executed deletion on incorrect target. Three systems affected. Action is irreversible.',risk_level:'critical',chain_valid:true,reversible:false,duration_ms:87},
+   ],
+   _analysis:{rc:'Agent read user_id from stale session cache instead of the active request payload, deleting the wrong user record across three systems.',factors:['Session context variable not invalidated between requests','No pre-flight user_id cross-validation before DELETE operations','Missing confirmation step for irreversible actions'],fix:['Assert req_ctx.user_id === request.body.user_id before any delete executes','Implement dry-run mode — output deletion targets before executing','Add 30-second confirmation window with human-readable target'],prev:['Require explicit field-level source annotation for destructive ops','Add GDPR workflow integration test against known fixture data'],conf:87,hrs:3}
+  },
+  {incident_id:'DEMO-002',title:'Billing agent wrote subscription to stale record',severity:'high',agent_id:'billing-agent',declared_at:new Date(Date.now()-7200000).toISOString(),resolved_at:new Date(Date.now()-3000000).toISOString(),
+   _sys:['postgres','stripe'],_rb:true,
+   _steps:[
+    {step:1,action_type:'READ',description:'Load customer subscription state',reasoning:'Fetching current tier before processing upgrade request.',risk_level:'low',chain_valid:true,reversible:true,duration_ms:8},
+    {step:2,action_type:'WRITE',description:'Update subscription record',reasoning:'Wrote new tier to a stale record already superseded by a concurrent update. Race condition triggered.',risk_level:'high',chain_valid:true,reversible:true,duration_ms:45},
+   ],
+   _analysis:null
+  },
+  {incident_id:'DEMO-003',title:'Search agent exceeded rate limit in retry loop',severity:'medium',agent_id:'search-agent',declared_at:new Date(Date.now()-14400000).toISOString(),resolved_at:new Date(Date.now()-10000000).toISOString(),
+   _sys:['external_api'],_rb:true,
+   _steps:[
+    {step:1,action_type:'CALL',description:'Query external search API',reasoning:'Initial search request timed out. Agent entered retry loop without exponential backoff.',risk_level:'low',chain_valid:true,reversible:true,duration_ms:3000},
+    {step:2,action_type:'CALL',description:'Retry #12 — rate limit triggered',reasoning:'Continued retrying without delay. 12 attempts in 1.8 seconds triggered hard rate limit.',risk_level:'medium',chain_valid:true,reversible:true,duration_ms:1},
+   ],
+   _analysis:null
+  },
+];
+
+const MOCK_ANALYSIS={
+  'DEMO-002':{rc:'Race condition: billing agent read subscription state then a concurrent update superseded it before the write completed, committing an out-of-date record.',factors:['No optimistic locking on subscription records','Agent did not re-validate state before WRITE','Concurrent update window not accounted for'],fix:['Add optimistic locking with version field','Re-fetch state immediately before commit','Wrap in transaction with SELECT FOR UPDATE'],prev:['Integration test for concurrent subscription updates','Require idempotency key on all Stripe writes'],conf:92,hrs:2},
+  'DEMO-003':{rc:'Search agent entered unbounded retry loop without exponential backoff, triggering hard rate limit after 12 requests in under 2 seconds.',factors:['No delay between retry attempts','No circuit breaker or rate limit awareness','Missing max-retry enforcement'],fix:['Implement exponential backoff: 500ms initial, x2 per retry, 30s cap','Add circuit breaker: halt 60s after 3 consecutive failures','Respect Retry-After header from 429 responses'],prev:['Add retry policy as first-class agent config property','Integration test under simulated 429 conditions'],conf:96,hrs:1},
+};
+
+let incidents=[],selId=null,filter='all',cache={'DEMO-001':DEMO[0]._analysis},isDemo=false;
+
+async function loadIncidents(){
+  try{
+    const r=await fetch('/incidents?limit=100',{signal:AbortSignal.timeout(4000)});
+    if(!r.ok) throw new Error('bad response');
+    const data=await r.json();
+    if(data.length===0){
+      useDemo();
+    } else {
+      incidents=data;
+      isDemo=false;
+      document.getElementById('wsDot').style.background='#2A6B3A';
+      document.getElementById('wsTxt').style.color='#2A6B3A';
+      document.getElementById('wsTxt').textContent='LIVE';
+      renderFeed();
+      updateStats();
+    }
+  }catch(e){ useDemo(); }
+}
+
+function useDemo(){
+  incidents=DEMO;
+  isDemo=true;
+  document.getElementById('demoBadge').style.display='inline-block';
+  document.getElementById('wsDot').style.background='var(--amber)';
+  document.getElementById('wsTxt').style.color='var(--amber)';
+  document.getElementById('wsTxt').textContent='DEMO';
+  renderFeed();
+  updateStats();
+  selectInc('DEMO-001');
+}
+
+function sf(el,f){
+  filter=f;
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  renderFeed();
+}
+
+function getFiltered(){
+  let list=incidents;
+  if(filter==='active') return list.filter(i=>!i.resolved_at);
+  if(filter==='resolved') return list.filter(i=>i.resolved_at);
+  if(filter==='critical') return list.filter(i=>i.severity==='critical');
+  if(filter==='high') return list.filter(i=>i.severity==='high');
+  return list;
+}
+
+function renderFeed(){
+  const list=getFiltered();
+  const el=document.getElementById('feedList');
+  if(!list.length){el.innerHTML='<div style="padding:20px 14px;font-family:var(--fd);font-size:9px;color:var(--dim);letter-spacing:.12em;">NO INCIDENTS</div>';return;}
+  el.innerHTML=list.map(inc=>{
+    const s=SEV[inc.severity]||SEV.medium,isSel=inc.incident_id===selId;
+    return `<div class="ic ${isSel?'on':''}" onclick="selectInc('${inc.incident_id}')" style="border-left:3px solid ${s.c}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <span class="sbdg" style="color:${s.c};background:${s.bg};border:1px solid ${s.b}">${s.l}</span>
+        <span style="font-family:var(--fm);font-size:7.5px;color:${isSel?'#8A7A65':'var(--dim)'}">...${inc.incident_id.slice(-4)}</span>
+      </div>
+      <div class="ict" style="color:${isSel?'#1A150E':'var(--ivory)'}">${inc.title}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+        <span style="font-family:var(--fm);font-size:8px;color:${isSel?'#8A7A65':'var(--dim)'}">${inc.agent_id}</span>
+        <div style="display:flex;align-items:center;gap:5px">
+          <span style="font-family:var(--fm);font-size:8px;color:${isSel?'#8A7A65':'var(--dim)'}">${new Date(inc.declared_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
+          ${!inc.resolved_at?'<div class="dot" style="background:var(--crimson);animation:pc 2s infinite"></div>':''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function selectInc(id){
+  selId=id;
+  document.getElementById('aPanel').innerHTML='';
+  document.getElementById('rForm').innerHTML='';
+  renderFeed();
+  const inc=incidents.find(i=>i.incident_id===id);
+  if(!inc) return;
+  document.getElementById('dId').textContent='INCIDENT REPLAY — '+id;
+  document.getElementById('dTitle').textContent=inc.title;
+  document.getElementById('dTitle').style.color='var(--ivory)';
+  document.getElementById('dBadge').innerHTML=!inc.resolved_at
+    ?`<span style="font-family:var(--fm);font-size:7.5px;color:var(--crimson);border:1px solid rgba(139,21,21,.5);padding:3px 8px;display:inline-block;animation:pc 2s infinite">ACTIVE</span>`
+    :`<span style="font-family:var(--fm);font-size:7.5px;color:var(--gold);border:1px solid rgba(200,164,74,.4);padding:3px 8px">RESOLVED</span>`;
+
+  let steps=[],sys=[],rb=false;
+  if(isDemo){
+    steps=inc._steps||[];
+    sys=inc._sys||[];
+    rb=inc._rb||false;
+  } else {
+    try{
+      const [rr,br]=await Promise.all([fetch(`/incidents/${id}/replay`),fetch(`/incidents/${id}/blast-radius`)]);
+      const rd=await rr.json();
+      const bd=await br.json();
+      steps=rd.steps||[];
+      sys=bd.systems_affected||[];
+      rb=bd.can_fully_rollback||false;
+    }catch(e){}
+  }
+
+  document.getElementById('dChips').innerHTML=
+    sys.map(s=>`<span class="chip">${s}</span>`).join('')+
+    `<span class="chip ${rb?'chip-ok':'chip-d'}">${rb?'↩ ROLLBACK POSSIBLE':'⚠ IRREVERSIBLE'}</span>`+
+    `<span class="chip">${steps.length} ACTIONS</span>`;
+
+  document.getElementById('dReplay').innerHTML=`
+    <div class="clbl">DECISION CHAIN</div>
+    <div class="cwrap">
+      <div class="cline"></div>
+      ${steps.map((st,i)=>{
+        const rc=RC[st.risk_level]||'#C8A44A';
+        const bg=st.risk_level==='critical'?'rgba(139,21,21,.07)':st.risk_level==='high'?'rgba(184,120,32,.05)':'rgba(200,164,74,.03)';
+        return `<div class="step" style="animation-delay:${i*.08}s">
+          <div class="nd ${st.chain_valid?'ndv':'ndi'}">${st.step}</div>
+          <div class="sc" style="border:1px solid ${rc}20;border-left:2px solid ${rc};background:${bg}">
+            <div class="sm">
+              <div style="display:flex;gap:6px;align-items:center">
+                <span class="tb" style="color:${rc};background:${rc}14;border:1px solid ${rc}28">${st.action_type}</span>
+                ${!st.reversible?'<span style="font-family:var(--fm);font-size:7px;color:var(--crimson)">⚠ IRREVERSIBLE</span>':''}
+              </div>
+              <span style="font-family:var(--fm);font-size:8px;color:var(--dim)">${st.duration_ms}ms</span>
+            </div>
+            <div class="st2">${st.description}</div>
+            <div class="sr">${st.reasoning}</div>
+            <div style="font-family:var(--fm);font-size:8px;color:${st.chain_valid?'#2A6B3A':'var(--crimson)'};margin-top:6px">${st.chain_valid?'✓ CHAIN VALID':'✗ CHAIN BROKEN'}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  if(cache[id]) renderAnalysis(cache[id]);
+  document.getElementById('aBar').style.display='flex';
+  document.getElementById('resolveBtn').style.display=!inc.resolved_at?'flex':'none';
+  document.getElementById('analyzeBtn').disabled=false;
+  document.getElementById('analyzeBtn').textContent='ANALYZE WITH CLAUDE';
+}
+
+function renderAnalysis(a){
+  const ap=document.getElementById('aPanel');
+  const pct=Math.round(a.conf||0);
+  ap.innerHTML=`<div class="apanel">
+    <div class="albl">ORACLE ANALYSIS <span class="asrc">${isDemo?'DEMO — SET ANTHROPIC_API_KEY FOR LIVE CLAUDE':'CLAUDE SONNET 4.6'}</span></div>
+    <div class="rc">${a.rc}</div>
+    ${a.factors.length?`<div class="asec">CONTRIBUTING FACTORS</div>${a.factors.map(f=>`<div class="fac">${f}</div>`).join('')}`:''}
+    ${a.fix.length?`<div class="asec">RECOMMENDED FIX</div>${a.fix.map((f,i)=>`<div class="fx"><span class="fxn">${i+1}.</span>${f}</div>`).join('')}`:''}
+    ${a.prev.length?`<div class="asec">PREVENTION</div>${a.prev.map(f=>`<div class="fac">${f}</div>`).join('')}`:''}
+    <div class="cb"><div class="cf" style="width:${pct}%"></div></div>
+    <div class="cl2"><span>CONFIDENCE</span><span>${pct}% · ~${a.hrs}h to resolve</span></div>
+  </div>`;
+}
+
+async function runAnalysis(){
+  if(!selId) return;
+  const btn=document.getElementById('analyzeBtn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>ANALYZING...';
+  const ap=document.getElementById('aPanel');
+  ap.innerHTML=`<div class="apanel"><div style="display:flex;align-items:center;font-family:var(--fm);font-size:10px;color:var(--muted);padding:4px 0"><span class="spinner"></span>Claude is reading the decision chain...</div></div>`;
+
+  if(isDemo){
+    setTimeout(()=>{
+      const a=MOCK_ANALYSIS[selId]||{rc:'Analysis complete. Chain integrity verified.',factors:['All actions within normal parameters'],fix:['No immediate action required'],prev:['Continue monitoring'],conf:72,hrs:0};
+      cache[selId]=a;
+      renderAnalysis(a);
+      btn.disabled=false;
+      btn.textContent='ANALYZE WITH CLAUDE';
+    },1800);
+  } else {
+    try{
+      const r=await fetch(`/incidents/${selId}/analyze`,{method:'POST'});
+      if(!r.ok) throw new Error();
+      const report=await r.json();
+      cache[selId]=report;
+      renderAnalysis(report);
+    }catch(e){
+      const a=MOCK_ANALYSIS[selId]||{rc:'Set ANTHROPIC_API_KEY on Render to enable live Claude analysis.',factors:['API key not configured'],fix:['Go to Render dashboard → Environment → add ANTHROPIC_API_KEY'],prev:['Get key at console.anthropic.com'],conf:0,hrs:0};
+      cache[selId]=a;
+      renderAnalysis(a);
+    }
+    btn.disabled=false;
+    btn.textContent='ANALYZE WITH CLAUDE';
+  }
+}
+
+function showResolve(){
+  const inc=incidents.find(i=>i.incident_id===selId);
+  if(!inc||inc.resolved_at) return;
+  const a=cache[selId];
+  document.getElementById('rForm').innerHTML=`
+    <div class="rform">
+      <div class="rform-title">DECLARE INCIDENT RESOLVED</div>
+      <div class="rform-label">ROOT CAUSE</div>
+      <textarea id="rcField" placeholder="What caused this incident?">${a?a.rc:''}</textarea>
+      <div class="rform-label">RESOLUTION</div>
+      <textarea id="resField" placeholder="How was it fixed?">${a&&a.fix?a.fix.join('\n'):''}</textarea>
+      <div class="rform-btns">
+        <button class="btn" style="border:1px solid rgba(90,78,62,.5);color:var(--dim);flex:0 0 auto;padding:8px 16px;" onclick="cancelResolve()">CANCEL</button>
+        <button class="btn btn-g" onclick="submitResolve()">CONFIRM RESOLUTION</button>
+      </div>
+    </div>`;
+  document.getElementById('aBar').style.display='none';
+}
+
+function cancelResolve(){
+  document.getElementById('rForm').innerHTML='';
+  document.getElementById('aBar').style.display='flex';
+}
+
+async function submitResolve(){
+  const inc=incidents.find(i=>i.incident_id===selId);
+  if(!inc) return;
+  const rc=document.getElementById('rcField').value.trim();
+  const res=document.getElementById('resField').value.trim();
+  if(!rc||!res) return;
+  if(isDemo){
+    inc.resolved_at=new Date().toISOString();
+    document.getElementById('rForm').innerHTML='';
+    document.getElementById('aBar').style.display='flex';
+    document.getElementById('resolveBtn').style.display='none';
+    document.getElementById('dBadge').innerHTML=`<span style="font-family:var(--fm);font-size:7.5px;color:var(--gold);border:1px solid rgba(200,164,74,.4);padding:3px 8px">RESOLVED</span>`;
+    renderFeed();updateStats();
+  } else {
+    try{
+      await fetch(`/incidents/${selId}/resolve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({root_cause:rc,resolution:res})});
+      await loadIncidents();
+      selectInc(selId);
+    }catch(e){}
+  }
+}
+
+function updateStats(){
+  const total=incidents.length;
+  const unres=incidents.filter(i=>!i.resolved_at).length;
+  document.getElementById('s1').textContent=total||'0';
+  document.getElementById('s2').textContent=unres||'0';
+  const ar=document.getElementById('activeRow');
+  if(unres>0){ar.style.display='flex';document.getElementById('activeTxt').textContent=unres+' ACTIVE';}
+  else ar.style.display='none';
+}
+
+function connectWS(){
+  if(isDemo) return;
+  try{
+    const ws=new WebSocket(location.origin.replace(/^http/,'ws')+'/ws/incidents');
+    const dot=document.getElementById('wsDot'),txt=document.getElementById('wsTxt');
+    ws.onopen=()=>{dot.style.background='#2A6B3A';txt.style.color='#2A6B3A';txt.textContent='LIVE';};
+    ws.onmessage=(e)=>{const m=JSON.parse(e.data);if(m.event==='ping')return;loadIncidents().then(()=>{if(selId)selectInc(selId);});};
+    ws.onclose=()=>setTimeout(connectWS,3000);
+  }catch(e){}
+}
+
+loadIncidents().then(connectWS);
+setInterval(()=>{if(!isDemo)loadIncidents();},30000);
+</script>
+</body>
+</html>
